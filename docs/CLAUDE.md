@@ -13,11 +13,6 @@ fds across restart, heartbeat within 60s of start.
 - Every allocation checked; every syscall’s error path handled and
 logged. The 48-hour soak is the test suite of last resort.
 - NEVER weaken, skip, or delete a test to make the suite pass.
-## Ownership
-- alice/: sensors and supervisor (src/sensors/, src/supervisor/)
-- bob/: pipeline and storage (src/common/, src/hub/, src/store/)
-- Shared: tools, tests, docs (tools/, tests/, docs/). The agent edits outside the current
-session owner’s area only when told explicitly whose session this is.
 ## Style
 - Systems core: C17, -Wall -Wextra -Werror, no VLAs.
 goto-cleanup for multi-resource functions.
