@@ -8,15 +8,18 @@
  * never needs to know which backend it has:
  *
  *   struct backend b;
- *   if (backend_init(&b, name) < 0) ...    name from --backend=real|fake
+ *   if (backend_init(&b, name, kind) < 0) ...    name from --backend=real|fake
  *   struct backend_reading r = backend_read(&b);
  *   if (r.status == BACKEND_OK) use r.value; else r.err says why
  *   backend_close(&b);
  *
  * Backends:
  *   real  the physical sensor (default)
- *   fake  deterministic simulated values, no hardware needed
+ *   fake  deterministic synthetic values, no hardware needed; every
+ *         reading must be flagged MSG_FLAG_SIMULATED (SYNTHETIC in the CSV)
  */
+
+#include "msg.h" /* enum sensor_kind */
 
 #define BACKEND_DEFAULT "real"
 
@@ -34,8 +37,9 @@ struct backend_reading {
 struct backend_ops {
     const char *name;
     int simulated; /* nonzero: values do not come from hardware */
-    /* Set *state for later calls. Returns 0 or -errno. */
-    int (*init)(void **state);
+    /* Set *state for later calls. kind is already validated.
+     * Returns 0 or -errno. */
+    int (*init)(void **state, enum sensor_kind kind);
     struct backend_reading (*read)(void *state);
     /* Release state. Returns 0 or -errno; state is released either way. */
     int (*close)(void *state);
@@ -54,11 +58,11 @@ const struct backend_ops *backend_find(const char *name);
 const char *backend_names(void);
 
 /*
- * Select and initialize a backend. Returns 0, -EINVAL for an unknown name,
- * or the backend's own -errno from init. On failure b is left uninitialized
+ * Select and initialize a backend for a sensor kind. Returns 0, -EINVAL for
+ * an unknown name or kind, or the backend's own -errno from init. On failure b is left uninitialized
  * (backend_read() fails and backend_close() does nothing).
  */
-int backend_init(struct backend *b, const char *name);
+int backend_init(struct backend *b, const char *name, enum sensor_kind kind);
 
 /* Read once. Fails with err == EBADF if b is not initialized. */
 struct backend_reading backend_read(struct backend *b);

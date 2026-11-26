@@ -31,6 +31,7 @@ int main(void)
     reading.u.reading.sensor_id = 1;
     reading.u.reading.seq = 42;
     reading.u.reading.timestamp_ns = INT64_C(1764000000123456789);
+    reading.u.reading.mono_ns = INT64_C(987654321098);
     reading.u.reading.value = 37.25;
     reading.u.reading.flags = MSG_FLAG_SIMULATED;
 
@@ -39,6 +40,7 @@ int main(void)
     hb.type = MSG_HEARTBEAT;
     hb.u.heartbeat.pid = (int32_t)getpid();
     hb.u.heartbeat.reading_count = 43;
+    hb.u.heartbeat.sensor_id = SENSOR_SOIL;
 
     /* Sensor end -> hub end. */
     roundtrip(sv[0], sv[1], &reading);
@@ -53,12 +55,14 @@ int main(void)
     assert(got.u.reading.sensor_id == 1);
     assert(got.u.reading.seq == 42);
     assert(got.u.reading.timestamp_ns == INT64_C(1764000000123456789));
+    assert(got.u.reading.mono_ns == INT64_C(987654321098));
     assert(got.u.reading.value == 37.25);
     assert(got.u.reading.flags == MSG_FLAG_SIMULATED);
     assert(sock_recv(sv[1], &got) == 0);
     assert(got.type == MSG_HEARTBEAT);
     assert(got.u.heartbeat.pid == (int32_t)getpid());
     assert(got.u.heartbeat.reading_count == 43);
+    assert(got.u.heartbeat.sensor_id == SENSOR_SOIL);
 
     /* The pair works in both directions. */
     roundtrip(sv[1], sv[0], &hb);

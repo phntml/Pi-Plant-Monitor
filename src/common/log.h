@@ -63,7 +63,8 @@ enum log_level {
     X(STORE_FLUSH)      /* buffered readings written to storage */            \
     X(STORE_ERROR)      /* storage write failed */                            \
     X(SIGNAL)           /* signal received (e.g. SIGTERM, SIGHUP) */          \
-    X(SYSCALL_FAIL)     /* a syscall failed; message names call and errno */
+    X(SYSCALL_FAIL)     /* a syscall failed; message names call and errno */  \
+    X(SAMPLE_OVERRUN)   /* sensor missed sample ticks; skipped, no burst */
 
 #define LOG_EVENT_ENUM_(name) EV_##name,
 enum log_ev {

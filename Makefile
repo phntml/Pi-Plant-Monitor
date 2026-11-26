@@ -4,7 +4,7 @@ ARFLAGS := rcs
 
 CFLAGS   := -std=c17 -Wall -Wextra -Werror -Wvla
 DEPFLAGS := -MMD -MP
-CPPFLAGS := -Isrc/common -Isrc/sensors
+CPPFLAGS := -Isrc/common -Isrc/sensors -Isrc/store
 
 SANFLAGS ?=
 CFLAGS   += $(SANFLAGS)
@@ -20,8 +20,9 @@ LIB   := $(BUILD)/lib
 BIN   := $(BUILD)/bin
 
 COMMON_SRCS     := $(wildcard src/common/*.c)
-SENSOR_SRCS     := src/sensors/sensor.c
-BACKEND_SRCS    := $(filter-out $(SENSOR_SRCS),$(wildcard src/sensors/*.c))
+SENSOR_MAINS    := src/sensors/light_proc.c src/sensors/soil_proc.c
+SENSOR_SRCS     := $(filter-out $(SENSOR_MAINS),$(wildcard src/sensors/*.c))
+STORE_SRCS      := $(wildcard src/store/*.c)
 HUB_SRCS        := src/hub/hub.c
 SUPERVISOR_SRCS := src/supervisor/supervisor.c
 
@@ -29,13 +30,14 @@ objs = $(patsubst src/%.c,$(OBJ)/%.o,$(1))
 
 COMMON_OBJS     := $(call objs,$(COMMON_SRCS))
 SENSOR_OBJS     := $(call objs,$(SENSOR_SRCS))
-BACKEND_OBJS    := $(call objs,$(BACKEND_SRCS))
+STORE_OBJS      := $(call objs,$(STORE_SRCS))
 HUB_OBJS        := $(call objs,$(HUB_SRCS))
 SUPERVISOR_OBJS := $(call objs,$(SUPERVISOR_SRCS))
 
 LIBCOMMON := $(LIB)/libcommon.a
 LIBSENSOR := $(LIB)/libsensor.a
-PROGS     := $(BIN)/sensor $(BIN)/hub $(BIN)/supervisor
+LIBSTORE  := $(LIB)/libstore.a
+PROGS     := $(BIN)/light_proc $(BIN)/soil_proc $(BIN)/hub $(BIN)/supervisor
 
 TEST_SRCS := $(wildcard tests/*.c)
 TEST_BINS := $(patsubst tests/%.c,$(BIN)/tests/%,$(TEST_SRCS))
@@ -43,11 +45,11 @@ TEST_OBJS := $(patsubst tests/%.c,$(OBJ)/tests/%.o,$(TEST_SRCS))
 
 .SECONDARY: $(TEST_OBJS)
 
-.PHONY: all sensor hub supervisor test asan memcheck clean
+.PHONY: all sensors hub supervisor test asan memcheck clean
 
 all: $(PROGS)
 
-sensor: $(BIN)/sensor
+sensors: $(BIN)/light_proc $(BIN)/soil_proc
 hub: $(BIN)/hub
 supervisor: $(BIN)/supervisor
 
@@ -59,13 +61,19 @@ $(LIBCOMMON): $(COMMON_OBJS)
 	@mkdir -p $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
-$(LIBSENSOR): $(BACKEND_OBJS)
+$(LIBSENSOR): $(SENSOR_OBJS)
 	@mkdir -p $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
-$(BIN)/sensor: $(SENSOR_OBJS) $(LIBSENSOR) $(LIBCOMMON)
-$(BIN)/sensor: PROG_LIBS := -lsensor
-$(BIN)/hub: $(HUB_OBJS) $(LIBCOMMON)
+$(LIBSTORE): $(STORE_OBJS)
+	@mkdir -p $(@D)
+	$(AR) $(ARFLAGS) $@ $^
+
+$(BIN)/light_proc: $(OBJ)/sensors/light_proc.o $(LIBSENSOR) $(LIBCOMMON)
+$(BIN)/soil_proc: $(OBJ)/sensors/soil_proc.o $(LIBSENSOR) $(LIBCOMMON)
+$(BIN)/light_proc $(BIN)/soil_proc: PROG_LIBS := -lsensor
+$(BIN)/hub: $(HUB_OBJS) $(LIBSTORE) $(LIBCOMMON)
+$(BIN)/hub: PROG_LIBS := -lstore
 $(BIN)/supervisor: $(SUPERVISOR_OBJS) $(LIBCOMMON)
 
 $(PROGS):
@@ -76,9 +84,9 @@ $(OBJ)/tests/%.o: tests/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-$(BIN)/tests/%: $(OBJ)/tests/%.o $(LIBSENSOR) $(LIBCOMMON)
+$(BIN)/tests/%: $(OBJ)/tests/%.o $(LIBSENSOR) $(LIBSTORE) $(LIBCOMMON)
 	@mkdir -p $(@D)
-	$(CC) $(LDFLAGS) -o $@ $< -L$(LIB) -lsensor -lcommon $(LDLIBS)
+	$(CC) $(LDFLAGS) -o $@ $< -L$(LIB) -lsensor -lstore -lcommon $(LDLIBS)
 
 # Some tests run the daemons, so build them first.
 test: $(TEST_BINS) $(PROGS)

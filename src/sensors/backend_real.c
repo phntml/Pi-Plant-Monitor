@@ -11,8 +11,9 @@
  * backend exits with a clear error instead of reporting made-up values.
  */
 
-static int real_init(void **state)
+static int real_init(void **state, enum sensor_kind kind)
 {
+    (void)kind;
     *state = NULL;
     return -ENOSYS;
 }

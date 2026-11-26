@@ -26,17 +26,17 @@ const char *backend_names(void)
     return "real|fake";
 }
 
-int backend_init(struct backend *b, const char *name)
+int backend_init(struct backend *b, const char *name, enum sensor_kind kind)
 {
     b->ops = NULL;
     b->state = NULL;
 
     const struct backend_ops *ops = backend_find(name);
-    if (ops == NULL)
+    if (ops == NULL || sensor_kind_name(kind) == NULL)
         return -EINVAL;
 
     void *state = NULL;
-    int rc = ops->init(&state);
+    int rc = ops->init(&state, kind);
     if (rc < 0)
         return rc;
 

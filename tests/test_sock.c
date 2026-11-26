@@ -41,6 +41,7 @@ int main(void)
     hb.type = MSG_HEARTBEAT;
     hb.u.heartbeat.pid = (int32_t)getpid();
     hb.u.heartbeat.reading_count = 3;
+    hb.u.heartbeat.sensor_id = SENSOR_LIGHT;
     assert(sock_send(cfd, &hb) == 0);
 
     struct msg got;
@@ -55,6 +56,7 @@ int main(void)
     assert(got.type == MSG_HEARTBEAT);
     assert(got.u.heartbeat.pid == (int32_t)getpid());
     assert(got.u.heartbeat.reading_count == 3);
+    assert(got.u.heartbeat.sensor_id == SENSOR_LIGHT);
 
     /* Hub -> sensor works too. */
     assert(sock_send(sfd, &hb) == 0);
